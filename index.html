@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Content Factory</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge" style="background:var(--accent-bg);color:var(--accent);border:1px solid var(--accent-border)">
+      ✦ AI powered
+    </div>
+    <h1 id="appName"></h1>
+    <p id="appTagline" style="color:var(--text2)"></p>
+  </div>
+
+  <!-- Profil -->
+  <div class="card" style="background:var(--bg2);border-color:var(--border)">
+    <div class="card-title" style="color:var(--text2)">👤 Siz haqingizda</div>
+    <div class="grid2">
+      <div class="field">
+        <label style="color:var(--text2)">Ismingiz / Brend nomi</label>
+        <input id="name" type="text" placeholder="Azizbek, StyleBrand..." />
+      </div>
+      <div class="field">
+        <label style="color:var(--text2)">Nisha (soha)</label>
+        <input id="niche" type="text" placeholder="Marketing, Fitnes, IT..." />
+      </div>
+    </div>
+    <div class="field">
+      <label style="color:var(--text2)">Maqsadli auditoriya</label>
+      <input id="audience" type="text" placeholder="Kimga yozasiz? Masalan: 25-35 yoshli tadbirkorlar" />
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label style="color:var(--text2)">Uslub va ohang</label>
+        <select id="tone"></select>
+      </div>
+      <div class="field">
+        <label style="color:var(--text2)">Kontent tili</label>
+        <select id="language"></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- G'oya -->
+  <div class="card" style="background:var(--bg2);border-color:var(--border)">
+    <div class="card-title" style="color:var(--text2)">💡 Kontent g'oyasi</div>
+    <div class="field">
+      <label style="color:var(--text2)">Mavzu yoki asosiy g'oya</label>
+      <textarea id="topic" placeholder="Nima haqida yozmoqchisiz? Masalan: 'Har kuni 30 daqiqa kitob o'qish hayotimni o'zgartirdi'"></textarea>
+      <div class="char-count" id="charCount" style="color:var(--text2)">0 belgi</div>
+    </div>
+    <div class="field">
+      <label style="color:var(--text2)">Qo'shimcha ma'lumot (ixtiyoriy)</label>
+      <input id="extra" type="text" placeholder="Statistika, shaxsiy tajriba, misol..." />
+    </div>
+  </div>
+
+  <!-- Platformalar -->
+  <div class="card" style="background:var(--bg2);border-color:var(--border)">
+    <div class="card-title" style="color:var(--text2)">🗂 Platformalarni tanlang</div>
+    <div class="platforms" id="platforms"></div>
+  </div>
+
+  <!-- Xato -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Tugma -->
+  <button class="gen-btn" id="genBtn"
+    style="background:var(--accent);color:#0f0a02">
+    ✦ Kontent yaratish
+  </button>
+
+  <!-- Natijalar -->
+  <div id="results"></div>
+
+</div>
+
+<!-- 1. Config (sozlamalar) -->
+<script src="config.js"></script>
+<!-- 2. App (logika) -->
+<script src="app.js"></script>
+</body>
+</html>

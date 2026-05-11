@@ -61,24 +61,23 @@ Qoidalar:
 - Faqat kontent yoz, kirish jumlalari kerak emas
 ${platformSections}`;
 
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 2000,
         messages: [{ role: "user", content: prompt }],
       }),
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || "Anthropic xatosi");
+    if (!res.ok) throw new Error(data.error?.message || "Groq xatosi");
 
-    const content = data.content.map((c) => c.text || "").join("");
+    const content = data.choices[0].message.content;
     return Response.json({ content }, { headers: CORS });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500, headers: CORS });

@@ -15,6 +15,11 @@ function fmt(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("uz-UZ") + " " + d.toLocaleTimeString("uz-UZ", {hour:"2-digit",minute:"2-digit"});
 }
+function formatNum(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + "M";
+  if (n >= 1000)    return (n/1000).toFixed(1) + "K";
+  return String(n);
+}
 
 async function init() {
   document.title = CONFIG.app.name;
@@ -185,15 +190,17 @@ $("confirmDeleteBtn").addEventListener("click", async () => {
 });
 
 function switchTab(tab) {
-  ["create","history","settings"].forEach(t => {
+  ["create","history","research","settings"].forEach(t => {
     const el = $("tab" + t.charAt(0).toUpperCase() + t.slice(1));
-    el.classList.add("hidden");
+    if (el) el.classList.add("hidden");
   });
-  $("tab" + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove("hidden");
+  const active = $("tab" + tab.charAt(0).toUpperCase() + tab.slice(1));
+  if (active) active.classList.remove("hidden");
   document.querySelectorAll(".main-tab").forEach(b => {
     b.classList.toggle("active", b.dataset.tab === tab);
   });
-  if (tab === "history") loadHistory();
+  if (tab === "history")  loadHistory();
+  if (tab === "research") initResearch();
 }
 
 document.querySelectorAll(".main-tab").forEach(btn => {
@@ -204,7 +211,9 @@ $("navSettings").addEventListener("click", () => {
   $("mainTitle").textContent = "Sozlamalar";
   hide("emptyState","contentForm");
   document.querySelectorAll(".main-tab").forEach(b => b.classList.remove("active"));
-  ["tabCreate","tabHistory"].forEach(id => $(id).classList.add("hidden"));
+  ["tabCreate","tabHistory","tabResearch"].forEach(id => {
+    const el = $(id); if (el) el.classList.add("hidden");
+  });
   $("tabSettings").classList.remove("hidden");
 });
 
@@ -373,6 +382,93 @@ async function loadHistory() {
   });
 }
 
+// ══════════════════════════════════════════════════════════
+//  RESEARCH
+// ══════════════════════════════════════════════════════════
+function initResearch() {
+  if (currentProject && $("researchNiche") && !$("researchNiche").value) {
+    $("researchNiche").value = currentProject.niche || "";
+  }
+}
+
+$("researchBtn").addEventListener("click", async () => {
+  const platform = $("researchPlatform").value;
+  const niche    = $("researchNiche").value.trim();
+  const count    = $("researchCount").value;
+  hideErr("researchError");
+
+  if (!niche) { showErr("researchError","Kalit so'z kiriting"); return; }
+
+  const btn = $("researchBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Qidirilmoqda...';
+  $("researchResults").innerHTML = "";
+
+  try {
+    const res = await fetch("/api/research", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ platform, niche, count: parseInt(count) }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Xato");
+    renderResearch(data.results, platform);
+  } catch (err) {
+    showErr("researchError", "Xato: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "🔍 Trendlarni topish";
+  }
+});
+
+function renderResearch(results, platform) {
+  const wrap = $("researchResults");
+  if (!results || !results.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>Natija topilmadi</h3><p>Boshqa kalit so\'z sinab ko\'ring</p></div>';
+    return;
+  }
+
+  const platformEmoji = { instagram:"📱", youtube:"🎬", threads:"💬" };
+
+  wrap.innerHTML = `<div class="text-sm text2" style="margin-bottom:12px">${results.length} ta trend topildi</div>`;
+
+  results.forEach((item, i) => {
+    const card = document.createElement("div");
+    card.className = "history-item";
+    card.style.cursor = "default";
+    card.innerHTML = `
+      <div class="flex-between">
+        <div style="flex:1;margin-right:12px">
+          <div class="history-topic">${i+1}. ${item.title}</div>
+          <div class="history-meta" style="margin-top:4px">
+            <span>${platformEmoji[platform]||""} ${platform}</span>
+            <span>👁 ${formatNum(item.views)}</span>
+            <span>❤️ ${formatNum(item.likes)}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-sm">Ko'rish</a>` : ""}
+          <button class="btn btn-sm btn-primary use-idea-btn" data-title="${item.title.replace(/"/g,'&quot;')}">
+            ✦ Ishlatish
+          </button>
+        </div>
+      </div>
+    `;
+    card.querySelector(".use-idea-btn").addEventListener("click", () => {
+      $("topic").value = item.title;
+      $("charCount").textContent = item.title.length + " belgi";
+      switchTab("create");
+      if (!currentProject) return;
+      hide("emptyState"); show("contentForm");
+      $("topic").scrollIntoView({ behavior:"smooth" });
+    });
+    wrap.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════════════
 $("changePasswordBtn").addEventListener("click", async () => {
   const pw  = $("newPassword").value;
   const pw2 = $("newPasswordConfirm").value;

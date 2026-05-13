@@ -64,6 +64,7 @@
       <div class="main-tabs" id="mainTabs">
         <button class="main-tab active" data-tab="create">✦ Yaratish</button>
         <button class="main-tab" data-tab="history">🕐 Tarix</button>
+        <button class="main-tab" data-tab="research">🔍 Research</button>
       </div>
     </div>
 
@@ -115,6 +116,50 @@
         <p>Yaratilgan kontentlar shu yerda saqlanadi</p>
       </div>
       <div id="historyList"></div>
+    </div>
+
+    <!-- RESEARCH -->
+    <div class="main-content hidden" id="tabResearch">
+      <div style="margin-bottom:1.5rem">
+        <div class="badge">🔍 Research</div>
+        <h2 style="font-size:20px;margin-top:8px">Trend kontentlar</h2>
+        <p class="text2 text-sm" style="margin-top:4px">
+          Platformadagi top kontentlarni tahlil qilib, g'oyalar oling
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎯 Qidiruv sozlamalari</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Platforma</label>
+            <select id="researchPlatform">
+              <option value="instagram">📱 Instagram Reels</option>
+              <option value="youtube">🎬 YouTube Shorts</option>
+              <option value="threads">💬 Threads</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Nechta natija</label>
+            <select id="researchCount">
+              <option value="5">5 ta</option>
+              <option value="10">10 ta</option>
+              <option value="20">20 ta</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kalit so'z / Nisha</label>
+          <input id="researchNiche" type="text"
+            placeholder="Masalan: fitnes, marketing, motivatsiya..."/>
+        </div>
+        <button class="gen-btn" id="researchBtn" style="margin-bottom:0">
+          🔍 Trendlarni topish
+        </button>
+      </div>
+
+      <div class="error-box" id="researchError"></div>
+      <div id="researchResults"></div>
     </div>
 
     <!-- SETTINGS -->

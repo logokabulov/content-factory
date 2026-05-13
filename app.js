@@ -11,6 +11,7 @@ const show = (...ids) => ids.forEach(id => $(id).classList.remove("hidden"));
 const hide = (...ids) => ids.forEach(id => $(id).classList.add("hidden"));
 const showErr = (elId, msg) => { const el=$(elId); el.textContent=msg; el.style.display="block"; };
 const hideErr = elId => { $(elId).style.display="none"; };
+
 function fmt(dateStr) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("uz-UZ") + " " + d.toLocaleTimeString("uz-UZ", {hour:"2-digit",minute:"2-digit"});
@@ -21,6 +22,9 @@ function formatNum(n) {
   return String(n);
 }
 
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
 async function init() {
   document.title = CONFIG.app.name;
 
@@ -48,17 +52,18 @@ async function init() {
   });
 }
 
-function showAuth() {
-  hide("appScreen"); show("authScreen");
-}
+function showAuth() { hide("appScreen"); show("authScreen"); }
 
 async function showApp() {
   hide("authScreen"); show("appScreen");
-  $("userEmail").textContent = currentUser.email.split("@")[0];
+  $("userEmail").textContent    = currentUser.email.split("@")[0];
   $("settingsEmail").textContent = currentUser.email;
   await loadProjects();
 }
 
+// ══════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════
 $("tabLogin").addEventListener("click", () => {
   $("tabLogin").classList.add("active");
   $("tabRegister").classList.remove("active");
@@ -100,7 +105,7 @@ $("authBtn").addEventListener("click", async () => {
     const { error } = await sb.auth.signUp({ email, password });
     if (error) { showErr("authError", error.message); }
     else {
-      $("authMsg").textContent = "✓ Emailingizni tasdiqlang";
+      $("authMsg").textContent   = "✓ Emailingizni tasdiqlang";
       $("authMsg").style.display = "block";
     }
     $("authBtn").disabled = false;
@@ -108,6 +113,9 @@ $("authBtn").addEventListener("click", async () => {
   }
 });
 
+// ══════════════════════════════════════════════════════════
+//  PROJECTS
+// ══════════════════════════════════════════════════════════
 async function loadProjects() {
   const { data } = await sb.from("projects")
     .select("*")
@@ -150,8 +158,8 @@ function selectProject(p) {
 }
 
 $("addProjectBtn").addEventListener("click", () => {
-  $("projectName").value = "";
-  $("projectNiche").value = "";
+  $("projectName").value    = "";
+  $("projectNiche").value   = "";
   $("projectAudience").value = "";
   show("newProjectModal");
   setTimeout(() => $("projectName").focus(), 100);
@@ -189,6 +197,9 @@ $("confirmDeleteBtn").addEventListener("click", async () => {
   renderProjects();
 });
 
+// ══════════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════════
 function switchTab(tab) {
   ["create","history","research","settings"].forEach(t => {
     const el = $("tab" + t.charAt(0).toUpperCase() + t.slice(1));
@@ -217,19 +228,25 @@ $("navSettings").addEventListener("click", () => {
   $("tabSettings").classList.remove("hidden");
 });
 
+// ══════════════════════════════════════════════════════════
+//  PLATFORMS
+// ══════════════════════════════════════════════════════════
 function buildPlatforms() {
   const container = $("platforms");
   container.innerHTML = "";
   CONFIG.platforms.forEach(p => {
     const btn = document.createElement("button");
-    btn.className = "platform-btn" + (p.active ? " active" : "");
+    btn.className  = "platform-btn" + (p.active ? " active" : "");
     btn.dataset.pid = p.id;
-    btn.innerHTML = `<span class="p-emoji">${p.emoji}</span><span class="p-name">${p.name}</span><span class="p-desc">${p.desc}</span>`;
+    btn.innerHTML  = `<span class="p-emoji">${p.emoji}</span><span class="p-name">${p.name}</span><span class="p-desc">${p.desc}</span>`;
     btn.addEventListener("click", () => btn.classList.toggle("active"));
     container.appendChild(btn);
   });
 }
 
+// ══════════════════════════════════════════════════════════
+//  GENERATE
+// ══════════════════════════════════════════════════════════
 $("topic").addEventListener("input", function() {
   $("charCount").textContent = this.value.length + " belgi";
 });
@@ -326,6 +343,9 @@ function renderResults(parsed, platforms) {
   wrap.scrollIntoView({ behavior:"smooth" });
 }
 
+// ══════════════════════════════════════════════════════════
+//  HISTORY
+// ══════════════════════════════════════════════════════════
 async function loadHistory() {
   if (!currentProject) { $("historyList").innerHTML=""; show("historyEmpty"); return; }
   const { data } = await sb.from("contents")
@@ -389,15 +409,58 @@ function initResearch() {
   if (currentProject && $("researchNiche") && !$("researchNiche").value) {
     $("researchNiche").value = currentProject.niche || "";
   }
+  updateContentTypes();
+  loadSavedCount();
+  hide("savedResearchPanel");
+  show("researchFormCard");
+  $("researchResults").innerHTML = "";
+}
+
+function updateContentTypes() {
+  const platform = $("researchPlatform").value;
+  const select   = $("researchContentType");
+  select.innerHTML = "";
+  const types = {
+    instagram: [
+      { value:"reels",    label:"Reels"    },
+      { value:"carousel", label:"Karusel"  },
+      { value:"post",     label:"Oddiy post"},
+    ],
+    youtube: [
+      { value:"shorts", label:"Shorts"      },
+      { value:"video",  label:"Oddiy video" },
+    ],
+    threads: [
+      { value:"post",  label:"Post"    },
+      { value:"reply", label:"Javoblar"},
+    ],
+  };
+  (types[platform]||[]).forEach(t => {
+    const o = document.createElement("option");
+    o.value = t.value; o.textContent = t.label;
+    select.appendChild(o);
+  });
+}
+
+$("researchPlatform").addEventListener("change", updateContentTypes);
+
+async function loadSavedCount() {
+  if (!currentProject) { $("savedCount").textContent = "0"; return; }
+  const { count } = await sb.from("research_results")
+    .select("*", { count:"exact", head:true })
+    .eq("project_id", currentProject.id);
+  $("savedCount").textContent = count || 0;
 }
 
 $("researchBtn").addEventListener("click", async () => {
-  const platform = $("researchPlatform").value;
-  const niche    = $("researchNiche").value.trim();
-  const count    = $("researchCount").value;
+  const platform    = $("researchPlatform").value;
+  const contentType = $("researchContentType").value;
+  const niche       = $("researchNiche").value.trim();
+  const count       = parseInt($("researchCount").value);
+  const minViews    = parseInt($("researchMinViews").value);
   hideErr("researchError");
 
-  if (!niche) { showErr("researchError","Kalit so'z kiriting"); return; }
+  if (!niche) { showErr("researchError","Hashtag kiriting"); return; }
 
   const btn = $("researchBtn");
   btn.disabled = true;
@@ -408,7 +471,7 @@ $("researchBtn").addEventListener("click", async () => {
     const res = await fetch("/api/research", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platform, niche, count: parseInt(count) }),
+      body: JSON.stringify({ platform, contentType, niche, count, minViews }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Xato");
@@ -424,12 +487,11 @@ $("researchBtn").addEventListener("click", async () => {
 function renderResearch(results, platform) {
   const wrap = $("researchResults");
   if (!results || !results.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>Natija topilmadi</h3><p>Boshqa kalit so\'z sinab ko\'ring</p></div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><h3>Natija topilmadi</h3><p>Boshqa hashtag sinab ko\'ring yoki minimal prosmotrni kamaytiring</p></div>';
     return;
   }
 
   const platformEmoji = { instagram:"📱", youtube:"🎬", threads:"💬" };
-
   wrap.innerHTML = `<div class="text-sm text2" style="margin-bottom:12px">${results.length} ta trend topildi</div>`;
 
   results.forEach((item, i) => {
@@ -441,28 +503,128 @@ function renderResearch(results, platform) {
         <div style="flex:1;margin-right:12px">
           <div class="history-topic">${i+1}. ${item.title}</div>
           <div class="history-meta" style="margin-top:4px">
-            <span>${platformEmoji[platform]||""} ${platform}</span>
+            <span>${platformEmoji[platform]||""} ${item.contentType||platform}</span>
             <span>👁 ${formatNum(item.views)}</span>
             <span>❤️ ${formatNum(item.likes)}</span>
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-sm">Ko'rish</a>` : ""}
-          <button class="btn btn-sm btn-primary use-idea-btn" data-title="${item.title.replace(/"/g,'&quot;')}">
-            ✦ Ishlatish
-          </button>
+          <button class="btn btn-sm save-research-btn">⭐ Saqlash</button>
+          <button class="btn btn-sm btn-primary use-idea-btn">✦ Ishlatish</button>
         </div>
       </div>
     `;
+
+    // Saqlash
+    card.querySelector(".save-research-btn").addEventListener("click", async (e) => {
+      if (!currentProject) { alert("Avval proyekt tanlang"); return; }
+      const saveBtn = e.target;
+      saveBtn.disabled = true;
+      saveBtn.textContent = "...";
+      const { error } = await sb.from("research_results").insert({
+        user_id:      currentUser.id,
+        project_id:   currentProject.id,
+        platform:     item.platform,
+        content_type: item.contentType,
+        title:        item.title,
+        views:        item.views,
+        likes:        item.likes,
+        url:          item.url,
+      });
+      if (error) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "⭐ Saqlash";
+      } else {
+        saveBtn.textContent = "✓ Saqlandi";
+        saveBtn.style.color = "var(--success)";
+        loadSavedCount();
+      }
+    });
+
+    // Ishlatish
     card.querySelector(".use-idea-btn").addEventListener("click", () => {
       $("topic").value = item.title;
       $("charCount").textContent = item.title.length + " belgi";
       switchTab("create");
-      if (!currentProject) return;
-      hide("emptyState"); show("contentForm");
-      $("topic").scrollIntoView({ behavior:"smooth" });
+      if (currentProject) { hide("emptyState"); show("contentForm"); }
+      setTimeout(() => $("topic").scrollIntoView({ behavior:"smooth" }), 300);
     });
+
     wrap.appendChild(card);
+  });
+}
+
+// Saqlangan research
+$("savedResearchBtn").addEventListener("click", async () => {
+  hide("researchFormCard");
+  $("researchResults").innerHTML = "";
+  show("savedResearchPanel");
+  await loadSavedResearch();
+});
+
+$("closeSavedBtn").addEventListener("click", () => {
+  hide("savedResearchPanel");
+  show("researchFormCard");
+});
+
+async function loadSavedResearch() {
+  if (!currentProject) return;
+  const list = $("savedResearchList");
+  list.innerHTML = '<div class="text2 text-sm">Yuklanmoqda...</div>';
+
+  const { data } = await sb.from("research_results")
+    .select("*")
+    .eq("project_id", currentProject.id)
+    .order("created_at", { ascending: false });
+
+  if (!data || !data.length) {
+    list.innerHTML = '<div class="empty-state"><div class="icon">⭐</div><h3>Hali saqlangan yo\'q</h3><p>Research dan videolarni saqlab qo\'ying</p></div>';
+    return;
+  }
+
+  const platformEmoji = { instagram:"📱", youtube:"🎬", threads:"💬" };
+  list.innerHTML = "";
+
+  data.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "history-item";
+    card.style.cursor = "default";
+    card.innerHTML = `
+      <div class="flex-between">
+        <div style="flex:1;margin-right:12px">
+          <div class="history-topic">${item.title}</div>
+          <div class="history-meta" style="margin-top:4px">
+            <span>${platformEmoji[item.platform]||""} ${item.content_type||""}</span>
+            <span>👁 ${formatNum(item.views||0)}</span>
+            <span>❤️ ${formatNum(item.likes||0)}</span>
+            <span>${fmt(item.created_at)}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          ${item.url ? `<a href="${item.url}" target="_blank" class="btn btn-sm">Ko'rish</a>` : ""}
+          <button class="btn btn-sm btn-primary use-saved-btn">✦ Ishlatish</button>
+          <button class="btn btn-sm btn-danger del-saved-btn" data-id="${item.id}">✕</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector(".use-saved-btn").addEventListener("click", () => {
+      $("topic").value = item.title;
+      $("charCount").textContent = item.title.length + " belgi";
+      switchTab("create");
+      if (currentProject) { hide("emptyState"); show("contentForm"); }
+      setTimeout(() => $("topic").scrollIntoView({ behavior:"smooth" }), 300);
+    });
+
+    card.querySelector(".del-saved-btn").addEventListener("click", async (e) => {
+      const id = e.target.dataset.id;
+      await sb.from("research_results").delete().eq("id", id);
+      card.remove();
+      loadSavedCount();
+    });
+
+    list.appendChild(card);
   });
 }
 
@@ -487,6 +649,9 @@ async function logout() {
 $("logoutBtn").addEventListener("click", logout);
 $("settingsLogout").addEventListener("click", logout);
 
+// ══════════════════════════════════════════════════════════
+//  BIND EVENTS
+// ══════════════════════════════════════════════════════════
 function bindEvents() {
   $("newProjectModal").addEventListener("click", e => {
     if (e.target===$("newProjectModal")) hide("newProjectModal");

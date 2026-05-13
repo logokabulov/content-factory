@@ -49,6 +49,16 @@ function toNum(val) {
   return 0;
 }
 
+function filterByContentType(item, contentType) {
+  const isVideo   = item.isVideo===true || item.type==="GraphVideo"   || item.mediaType==="VIDEO";
+  const isAlbum   = item.isAlbum===true || item.type==="GraphSidecar" || item.mediaType==="CAROUSEL_ALBUM";
+  const isImage   = !isVideo && !isAlbum;
+  if (contentType === "reels")    return isVideo;
+  if (contentType === "carousel") return isAlbum;
+  if (contentType === "post")     return isImage;
+  return true;
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   try {
@@ -64,133 +74,127 @@ export async function onRequestPost(context) {
 
     // ── INSTAGRAM ──
     if (platform === "instagram") {
-      if (contentType === "reels") {
-        // Reels uchun maxsus actor
-        const items = await runActor(
-          "apify~instagram-reel-scraper",
-          {
-            hashtags,
-            resultsLimit: Math.max(50, count*5),
-            proxy: { useApifyProxy:true, apifyProxyGroups:["RESIDENTIAL"] },
-          },
-          env.APIFY_API_KEY
-        );
-        results = items.map(item => ({
-          title:       (item.caption||item.alt||"#"+hashtags[0]).replace(/\n/g," ").slice(0,150),
-          views:       toNum(item.videoPlayCount)||toNum(item.videoViewCount)||toNum(item.playsCount)||toNum(item.likesCount)||0,
-          likes:       toNum(item.likesCount)||0,
-          url:         item.url||(item.shortCode?`https://instagram.com/p/${item.shortCode}`:""),
-          contentType: "reels",
-          platform:    "instagram",
-        })).filter(r=>r.title.length>2);
+      const rawItems = await runActor(
+        "apify~instagram-hashtag-scraper",
+        {
+          hashtags,
+          resultsLimit: Math.max(100, count * 10),
+          proxy: { useApifyProxy: true, apifyProxyGroups: ["RESIDENTIAL"] },
+        },
+        env.APIFY_API_KEY
+      );
 
-      } else {
-        // Karusel va oddiy post uchun hashtag scraper
-        const items = await runActor(
-          "apify~instagram-hashtag-scraper",
-          {
-            hashtags,
-            resultsLimit: Math.max(50, count*5),
-            proxy: { useApifyProxy:true, apifyProxyGroups:["RESIDENTIAL"] },
-          },
-          env.APIFY_API_KEY
-        );
-        // Kontent turi bo'yicha filter
-        results = items
-          .filter(item => {
-            if (contentType === "carousel") return item.type==="GraphSidecar" || item.isAlbum===true;
-            if (contentType === "post")     return item.type==="GraphImage"   || (!item.isVideo && !item.isAlbum);
-            return true;
-          })
-          .map(item => ({
-            title:       (item.caption||"#"+hashtags[0]).replace(/\n/g," ").slice(0,150),
-            views:       toNum(item.likesCount)||0,
+      results = rawItems
+        .filter(item => filterByContentType(item, contentType))
+        .map(item => {
+          const isVideo = item.isVideo===true || item.type==="GraphVideo";
+          const views   = isVideo
+            ? (toNum(item.videoViewCount)||toNum(item.videoPlayCount)||toNum(item.playsCount)||toNum(item.likesCount)||0)
+            : toNum(item.likesCount)||0;
+          return {
+            title:       (item.caption||item.alt||"#"+hashtags[0]).replace(/\n/g," ").slice(0,150),
+            views,
             likes:       toNum(item.likesCount)||0,
             url:         item.url||(item.shortCode?`https://instagram.com/p/${item.shortCode}`:""),
             contentType: contentType||"post",
             platform:    "instagram",
-          })).filter(r=>r.title.length>2);
-      }
+          };
+        })
+        .filter(r => r.title.length > 2);
 
     // ── YOUTUBE ──
     } else if (platform === "youtube") {
       const searchQuery = contentType==="shorts"
-        ? hashtags.join(" ") + " #shorts"
+        ? hashtags.join(" ") + " shorts"
         : hashtags.join(" ");
 
-      // Actor nomlarini navbatma-navbat sinab ko'ramiz
       const ytActors = [
         {
           id:    "apify~youtube-scraper",
-          input: { searchKeywords:searchQuery, maxResults:Math.max(50,count*5) },
+          input: {
+            searchKeywords: searchQuery,
+            maxResults:     Math.max(50, count*5),
+            proxy: { useApifyProxy: true },
+          },
         },
         {
           id:    "bernardo~youtube-search-scraper",
-          input: { searchTerms:[searchQuery], maxResultsPerSearch:Math.max(50,count*5) },
+          input: {
+            searchTerms:          [searchQuery],
+            maxResultsPerSearch:  Math.max(50, count*5),
+          },
         },
       ];
 
       let rawItems = [];
+      let lastError = "";
       for (const actor of ytActors) {
         try {
           rawItems = await runActor(actor.id, actor.input, env.APIFY_API_KEY);
           if (rawItems.length > 0) break;
-        } catch { continue; }
+        } catch(e) { lastError = e.message; continue; }
       }
+      if (!rawItems.length && lastError) throw new Error(lastError);
 
       results = rawItems.map(item => ({
         title:       (item.title||item.name||"Video").slice(0,150),
         views:       toNum(item.viewCount)||toNum(item.views)||toNum(item.statistics?.viewCount)||0,
         likes:       toNum(item.likeCount)||toNum(item.likes)||toNum(item.statistics?.likeCount)||0,
-        url:         item.url||item.link||(item.id?`https://youtube.com/watch?v=${item.id}`:"")||(item.videoId?`https://youtube.com/watch?v=${item.videoId}`:""),
+        url:         item.url||item.link
+          ||(item.id       ? `https://youtube.com/watch?v=${item.id}`      : "")
+          ||(item.videoId  ? `https://youtube.com/watch?v=${item.videoId}` : ""),
         contentType: contentType||"shorts",
         platform:    "youtube",
-      })).filter(r=>r.title.length>2);
+      })).filter(r => r.title.length > 2);
 
     // ── THREADS ──
     } else if (platform === "threads") {
-      const items = await runActor(
+      const rawItems = await runActor(
         "apify~threads-scraper",
-        { queries:hashtags, resultsLimit:Math.max(50,count*5), proxy:{ useApifyProxy:true } },
+        {
+          queries:      hashtags,
+          resultsLimit: Math.max(50, count*5),
+          proxy: { useApifyProxy: true },
+        },
         env.APIFY_API_KEY
       );
-      results = items.map(item => ({
+      results = rawItems.map(item => ({
         title:       (item.text||item.content||item.caption||"Post").replace(/\n/g," ").slice(0,150),
         views:       toNum(item.viewsCount)||toNum(item.repostsCount)||toNum(item.likesCount)||0,
         likes:       toNum(item.likesCount)||0,
         url:         item.url||item.link||"",
         contentType: contentType||"post",
         platform:    "threads",
-      })).filter(r=>r.title.length>2);
+      })).filter(r => r.title.length > 2);
     }
 
     // Ko'p prosmotr bo'yicha saralash
-    results.sort((a,b)=>b.views-a.views);
+    results.sort((a,b) => b.views - a.views);
 
     // MinViews filtri
-    let filtered = minViews>0 ? results.filter(r=>r.views>=minViews) : results;
+    let filtered = minViews > 0 ? results.filter(r => r.views >= minViews) : results;
 
     let warning = "";
-    if (minViews>0 && filtered.length===0 && results.length>0) {
+    if (minViews > 0 && filtered.length === 0 && results.length > 0) {
       filtered = results;
       const label = minViews>=1000000 ? (minViews/1000000)+"M" : (minViews/1000)+"K";
       warning = `${label}+ prosmotrli natija topilmadi — eng yaxshi natijalar ko'rsatildi`;
     }
-    if (results.length===0) {
+    if (results.length === 0) {
       warning = "Natija topilmadi — boshqa hashtag yoki platformani sinab ko'ring";
     }
 
     return Response.json({
-      results: filtered.slice(0,count),
+      results: filtered.slice(0, count),
       warning,
-      total: results.length,
-    }, { headers:CORS });
+      total:   results.length,
+    }, { headers: CORS });
 
   } catch(err) {
-    return Response.json({ error:err.message },{ status:500, headers:CORS });
+    return Response.json({ error: err.message }, { status:500, headers:CORS });
   }
 }
 
 export async function onRequestOptions() {
-  return new Response(null, { headers:CORS });
+  return new Response(null, { headers: CORS });
 }

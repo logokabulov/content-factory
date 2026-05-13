@@ -120,23 +120,54 @@
 
     <!-- RESEARCH -->
     <div class="main-content hidden" id="tabResearch">
-      <div style="margin-bottom:1.5rem">
-        <div class="badge">🔍 Research</div>
-        <h2 style="font-size:20px;margin-top:8px">Trend kontentlar</h2>
-        <p class="text2 text-sm" style="margin-top:4px">
-          Platformadagi top kontentlarni tahlil qilib, g'oyalar oling
-        </p>
+      <div class="flex-between" style="margin-bottom:1.5rem">
+        <div>
+          <div class="badge">🔍 Research</div>
+          <h2 style="font-size:20px;margin-top:8px">Trend kontentlar</h2>
+          <p class="text2 text-sm" style="margin-top:4px">Top kontentlarni topib, g'oyalar oling</p>
+        </div>
+        <button class="btn btn-sm" id="savedResearchBtn">
+          ⭐ Saqlangan (<span id="savedCount">0</span>)
+        </button>
       </div>
 
-      <div class="card">
+      <!-- Qidiruv -->
+      <div class="card" id="researchFormCard">
         <div class="card-title">🎯 Qidiruv sozlamalari</div>
         <div class="grid2">
           <div class="field">
             <label>Platforma</label>
             <select id="researchPlatform">
-              <option value="instagram">📱 Instagram Reels</option>
-              <option value="youtube">🎬 YouTube Shorts</option>
+              <option value="instagram">📱 Instagram</option>
+              <option value="youtube">🎬 YouTube</option>
               <option value="threads">💬 Threads</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Kontent turi</label>
+            <select id="researchContentType">
+              <option value="reels">Reels</option>
+              <option value="carousel">Karusel</option>
+              <option value="post">Post</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Hashtaglar (vergul bilan)</label>
+          <input id="researchNiche" type="text"
+            placeholder="qurulish, dizayn, interyer, remont"/>
+          <div class="char-count">Bir nechta hashtag kiriting — natija yaxshiroq bo'ladi</div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Minimal prosmotr</label>
+            <select id="researchMinViews">
+              <option value="0">Barchasi</option>
+              <option value="10000">10K+</option>
+              <option value="50000">50K+</option>
+              <option value="100000">100K+</option>
+              <option value="500000">500K+</option>
+              <option value="1000000">1M+</option>
             </select>
           </div>
           <div class="field">
@@ -148,11 +179,6 @@
             </select>
           </div>
         </div>
-        <div class="field">
-          <label>Kalit so'z / Nisha</label>
-          <input id="researchNiche" type="text"
-            placeholder="Masalan: fitnes, marketing, motivatsiya..."/>
-        </div>
         <button class="gen-btn" id="researchBtn" style="margin-bottom:0">
           🔍 Trendlarni topish
         </button>
@@ -160,6 +186,15 @@
 
       <div class="error-box" id="researchError"></div>
       <div id="researchResults"></div>
+
+      <!-- Saqlangan research panel -->
+      <div id="savedResearchPanel" class="hidden">
+        <div class="flex-between" style="margin-bottom:1rem">
+          <div style="font-size:15px;font-weight:500">⭐ Saqlangan videolar</div>
+          <button class="btn btn-sm" id="closeSavedBtn">✕ Yopish</button>
+        </div>
+        <div id="savedResearchList"></div>
+      </div>
     </div>
 
     <!-- SETTINGS -->
